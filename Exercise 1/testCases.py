@@ -77,12 +77,36 @@ def noOverlaps(r, N):
     return x
     
     
-N = 2501
-r = 1 / np.sqrt(4 * np.pi * N) * np.ones(N) #Particle radii, ensures that the area taken up is 1/4
-r[0] = 5 * r[0] #Set projectile radius to 5 times that of the other particles
-tic = time.time()
-x = noOverlaps(r, N) #Particle positions; x[0][i] is the x-coord of particle i
-toc = time.time()
-print(toc - tic)
-plt.scatter(x[0], x[1])
+# N = 2501
+# r = 1 / np.sqrt(4 * np.pi * N) * np.ones(N) #Particle radii, ensures that the area taken up is 1/4
+# r[0] = 5 * r[0] #Set projectile radius to 5 times that of the other particles
+# tic = time.time()
+# x = noOverlaps(r, N) #Particle positions; x[0][i] is the x-coord of particle i
+# toc = time.time()
+# print(toc - tic)
+# plt.scatter(x[0], x[1])
+# plt.show()
+
+def noOverlaps(r, N):
+    x = np.empty((2, N))
+    x[:,0] = np.random.uniform(0 + np.amax(r), 1 - np.amax(r), 2)
+    for i in trange(1, N):
+        valid = False
+        while valid == False:
+            #Need to pass how many particles have been placed to the function isValid
+            x_new = np.random.uniform(0 + np.amax(r), 1 - np.amax(r))
+            y_new = np.random.uniform(0 + np.amax(r), 1 - np.amax(r))
+            r_new = r[i]
+            valid = checkValidPos(x_new, y_new, r_new, x, r, i)
+        x[:, i] = np.array([x_new, y_new])
+    return x
+    
+N = 5000
+r = 1 / np.sqrt(4 * np.pi * N) * np.ones(N)
+x = noOverlaps(r, N)
+D = pdist(np.transpose(x))
+print("2 r = ", 2*r[0])
+print(np.amin(D), np.amin(D)>2*r[0])
+
+plt.scatter(x[0], x[1], s = 1000 * r[0])
 plt.show()

@@ -18,7 +18,7 @@ def loop(x, v, r, m, xi, N, first, collisions, involvements, numberOfCollisions)
         involvements[i] += 1
         x += v * dt
         simTime += dt
-        if collision[2] == 'h' or collision[2] == 'v': #If collision is with a wall, update velocities and calculate next collisions accordingly
+        if collision[2] == -1 or collision[2] == -2: #If collision is with a wall, update velocities and calculate next collisions accordingly
             v = updateVelocitiesWall(i, v, collision, xi)
             collisions = nextCollisionWall(i, x, v, r, N, collisions, involvements, simTime)
         else: #If collision is with a particle, update velocities and calculate next collisions accordingly

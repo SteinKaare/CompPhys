@@ -10,7 +10,7 @@ import sys
 profile = line_profiler.LineProfiler()
 
 #Particle positions; x[0][i] is the x-coord of particle i; x[:,i] is [xi,yi]
-
+#-1 is horizontal wall, -2 is vertical wall
 
 @jit(nopython = True)
 def getNextParticleTime(i, j, x, v, r):
@@ -44,30 +44,29 @@ def getAllParticleTimes(i, x, v, r, N):
     indices = np.delete(indices, to_remove) #Remove the values we do not want to push
     return times, indices
 
+@jit(nopython = True) 
+def checkValidPos(x_new, y_new, r_new, x, r, placed): #Checks for overlaps between a particle and the rest
+    for i in range(placed):
+        dist = np.sqrt((x_new - x[0, i])**2 + (y_new - x[1, i])**2)
+        if dist < r_new + r[i]:
+            return False
+    return True
+        
 #Ensure no overlaps between particles and walls
 def noOverlaps(r, N):
-    
-    x = np.empty((2,N))
-    x[:,0] = (1 - 2 * np.amax(r)) * np.random.random((2)) + np.amax(r) #Ensure the particle is inside the box: (b-a) * rand + a
-    particleList = [(x[0][0], x[1][0], r[0])]
+    x = np.empty((2, N))
+    x[:,0] = np.random.uniform(0 + np.amax(r), 1 - np.amax(r), 2)
     for i in trange(1, N):
         valid = False
         while valid == False:
-            p1 = ( (1 - 2 * np.amax(r)) * np.random.random() + np.amax(r) , (1 - 2 * np.amax(r)) * np.random.random() + np.amax(r), r[i])
-            j = 0
-            p2 = particleList[j]
-            dist = np.sqrt( (p1[0] - p2[0])**2 + (p1[1] - p2[1])**2 ) 
-            while dist >= p1[2] + p2[2]:
-                if j == len(particleList) - 1: #If we are at the final index, and the while is satisfied, the particle is valid
-                    valid = True
-                    particleList.append(p1)
-                    x[:, i] = np.array([p1[0], p1[1]])
-                    break
-                j += 1
-                p2 = particleList[j]
-                dist = np.sqrt( (p1[0] - p2[0])**2 + (p1[1] - p2[1])**2 )
-               
+            #Need to pass how many particles have been placed to the function isValid
+            x_new = np.random.uniform(0 + np.amax(r), 1 - np.amax(r))
+            y_new = np.random.uniform(0 + np.amax(r), 1 - np.amax(r))
+            r_new = r[i]
+            valid = checkValidPos(x_new, y_new, r_new, x, r, i)
+        x[:, i] = np.array([x_new, y_new])
     return x
+    
 
 #Set up initialisation
 def initialisation(x, v, r, collisions,N, involvements):
@@ -75,16 +74,16 @@ def initialisation(x, v, r, collisions,N, involvements):
     for i in range(N):
         if v[0][i] > 0:
             t = (1 - r[i] - x[0][i]) / v[0][i]
-            hq.heappush(collisions, (t, i, 'v', 0) )
+            hq.heappush(collisions, (t, i, -2, 0) )
         elif v[0][i] < 0:
             t = (r[i]- x[0][i]) / v[0][i]
-            hq.heappush(collisions, (t, i, 'v', 0) )
+            hq.heappush(collisions, (t, i, -2, 0) )
         if v[1][i] > 0:
             t = (1 - r[i] - x[1][i]) / v[1][i]
-            hq.heappush(collisions, (t, i, 'h', 0) )
+            hq.heappush(collisions, (t, i, -1, 0) )
         elif v[1][i] < 0:
             t = (r[i]- x[1][i]) / v[1][i]
-            hq.heappush(collisions, (t, i, 'h', 0) )
+            hq.heappush(collisions, (t, i, -1, 0) )
     #Calculate particle collision times
 
     for i in range(N):
@@ -98,10 +97,10 @@ def initialisation(x, v, r, collisions,N, involvements):
 @jit(nopython = True)
 def updateVelocitiesWall(i, v, collision, xi):
     #Update velocities
-    if collision[2] == 'v':
+    if collision[2] == -2:
         v[0][i] = - xi * v[0][i]
         v[1][i] = xi * v[1][i]
-    elif collision[2] == 'h':
+    elif collision[2] == -1:
         v[0][i] = xi * v[0][i]
         v[1][i] = -xi * v[1][i]
     return v
@@ -124,16 +123,16 @@ def nextCollisionWall(i, x, v, r, N, collisions, involvements, simTime):
     #Next collision with wall
     if v[0][i] > 0:
         t = (1 - r[i] - x[0][i]) / v[0][i]
-        hq.heappush(collisions, (t + simTime, i, 'v', involvements[i]) )
+        hq.heappush(collisions, (t + simTime, i, -2, involvements[i]) )
     elif v[0][i] < 0:
         t = (r[i]- x[0][i]) / v[0][i]
-        hq.heappush(collisions, (t + simTime, i, 'v', involvements[i]) )
+        hq.heappush(collisions, (t + simTime, i, -2, involvements[i]) )
     if v[1][i] > 0:
         t = (1 - r[i] - x[1][i]) / v[1][i]
-        hq.heappush(collisions, (t + simTime, i, 'h', involvements[i]) )
+        hq.heappush(collisions, (t + simTime, i, -1, involvements[i]) )
     elif v[1][i] < 0:
         t = (r[i]- x[1][i]) / v[1][i]
-        hq.heappush(collisions, (t + simTime, i, 'h', involvements[i]) )
+        hq.heappush(collisions, (t + simTime, i, -1, involvements[i]) )
     #Next collision with particles:
     times, indices = getAllParticleTimes(i, x, v, r, N)
     for j in indices:
@@ -148,16 +147,16 @@ def nextCollisionParticles(i, j, x, v, r, N, collisions, involvements, simTime):
         #Next collision with walls
         if v[0][p] > 0:
             t = (1 - r[p] - x[0][p]) / v[0][p]
-            hq.heappush(collisions, (t + simTime, p, 'v', involvements[p]) )
+            hq.heappush(collisions, (t + simTime, p, -2, involvements[p]) )
         elif v[0][p] < 0:
             t = (r[p]- x[0][p]) / v[0][p]
-            hq.heappush(collisions, (t + simTime, p, 'v', involvements[p]) )
+            hq.heappush(collisions, (t + simTime, p, -2, involvements[p]) )
         if v[1][p] > 0:
             t = (1 - r[p] - x[1][p]) / v[1][p]
-            hq.heappush(collisions, (t + simTime, p, 'h', involvements[p]) )
+            hq.heappush(collisions, (t + simTime, p, -1, involvements[p]) )
         elif v[1][p] < 0:
             t = (r[p]- x[1][p]) / v[1][p]
-            hq.heappush(collisions, (t + simTime, p, 'h', involvements[p]) )
+            hq.heappush(collisions, (t + simTime, p, -1, involvements[p]) )
         #Next collision with particles:
         times, indices = getAllParticleTimes(p, x, v, r, N)
         for l in indices:
@@ -177,10 +176,10 @@ def getValidCollision(collisions, involvements):
             i = collision[1]
             continue
         j = collision[2]
-        if isinstance(j, str) == True: #Check if the collision is with a wall; if so, the collision is valid at this point
+        if j < 0: #Check if the collision is with a wall; if so, the collision is valid at this point
             valid = True
             continue
-        if collision[4] != involvements[j]: #Check if the involvements of particel j matches the one at the collision time
+        if collision[4] != involvements[j]: #Check if the involvements of particle j matches the one at the collision time
             hq.heappop(collisions)
             if len(collisions) == 0: return 0  #If all particles have come to a stop, there are no further collisions
             collision = collisions[0]
@@ -200,7 +199,7 @@ def loop(x, v, r, m, xi, N, first, collisions, involvements, numberOfCollisions)
         involvements[i] += 1
         x = x + v * dt
         simTime += dt
-        if collision[2] == 'h' or collision[2] == 'v': #If collision is with a wall, update velocities and calculate next collisions accordingly
+        if collision[2] == -1 or collision[2] == -2: #If collision is with a wall, update velocities and calculate next collisions accordingly
             v = updateVelocitiesWall(i, v, collision, xi)
             collisions = nextCollisionWall(i, x, v, r, N, collisions, involvements, simTime)
         else: #If collision is with a particle, update velocities and calculate next collisions accordingly
