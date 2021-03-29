@@ -10,6 +10,7 @@ def loop(x, v, r, m, xi, N, first, collisions, involvements, numberOfCollisions)
     i = collision[1]
     dt = collision[0]
     simTime = 0 #The accumulated simulated time
+    times = np.array([0]) #Array of times to plot
     #Write initial speed to file
     with open(f"problem2_version{label}_v0={v0}_NOC={numberOfCollisions}_part={N}.npy", "ab") as f:
         np.save(f, np.sqrt(v[0]**2 + v[1]**2))
@@ -27,14 +28,17 @@ def loop(x, v, r, m, xi, N, first, collisions, involvements, numberOfCollisions)
             v = updateVelocitiesParticles(i, j, x, v, r, m, xi)
             collisions = nextCollisionParticles(i, j, x, v, r, N, collisions, involvements, simTime)
         #Write speeds to file
-        if k % 100 == 0: #Store speeds for every 100th collision
+        if k != 0 and k % 100 == 0: #Store speeds for every 100th collision
             with open(f"problem2_version{label}_v0={v0}_NOC={numberOfCollisions}_part={N}.npy", "ab") as f:
                 np.save(f, np.sqrt(v[0]**2 + v[1]**2))
+            times = np.append(times, simTime)
         collision = getValidCollision(collisions, involvements)
         if collision == 0: return x, v, collisions, involvements #If there are no more collisions, end the loop
         i = collision[1]
         dt = collision[0] - simTime
-
+    
+    with open(f"problem2_times_version{label}_v0={v0}_NOC={numberOfCollisions}_part={N}.npy", "ab") as f:
+        np.save(f, times)
     return x, v, collisions, involvements
     
 N = 5000
