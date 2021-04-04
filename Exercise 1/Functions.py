@@ -37,7 +37,7 @@ def noOverlaps(r, N):
     return x
     
 @jit(nopython=True)
-def getParticleTimes(i, x, v, r, N):
+def getParticleParticleTimes(i, x, v, r, N):
     indices = np.arange(N)
     dx_x = x[0] - x[0, i]
     dx_y = x[1] - x[1, i]
@@ -82,7 +82,7 @@ def initialisation(x, v, r, collisions, N, involvements):
             hq.heappush(collisions, (t, i, -1, 0) )
     #Calculate particle collision times
     for i in range(N):
-        times, indices = getParticleTimes(i, x, v, r, N)
+        times, indices = getParticleParticleTimes(i, x, v, r, N)
         for index, j in enumerate(indices):
             hq.heappush(collisions, (times[index], i, j, 0, 0))
     return collisions
@@ -128,7 +128,7 @@ def nextCollisionWall(i, x, v, r, N, collisions, involvements, simTime):
         t = (r[i]- x[1][i]) / v[1][i]
         hq.heappush(collisions, (t + simTime, i, -1, involvements[i]) )
     #Next collision with particles:
-    times, indices = getParticleTimes(i, x, v, r, N)
+    times, indices = getParticleParticleTimes(i, x, v, r, N)
     for index, j in enumerate(indices):
         hq.heappush(collisions, (times[index] + simTime, i, j, involvements[i], involvements[j]))
     return collisions
@@ -152,7 +152,7 @@ def nextCollisionParticles(i, j, x, v, r, N, collisions, involvements, simTime):
             t = (r[p]- x[1][p]) / v[1][p]
             hq.heappush(collisions, (t + simTime, p, -1, involvements[p]) )
         #Next collision with particles:
-        times, indices = getParticleTimes(p, x, v, r, N)
+        times, indices = getParticleParticleTimes(p, x, v, r, N)
         for index, l in enumerate(indices):
             hq.heappush(collisions, (times[index] + simTime, p, l, involvements[p], involvements[l]))
     return collisions

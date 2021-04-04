@@ -29,9 +29,10 @@ def loop(x, v, r, m, xi, N, first, collisions, involvements, numberOfCollisions)
     #Projectile energy
     E0 = 1/2 * m[0] * np.sum(v[:,0]**2) #Initial energy for comparison
     E = 1/2 * m[0] * np.sum(v[:,0]**2) #Energy to be updated
+    energies = [E0]
     
     for k in trange(numberOfCollisions):
-        if E < 0.1 * E0: return x, v, collisions, involvements
+        if E < 0.1 * E0: return x, v, collisions, involvements, energies
         involvements[i] += 1
         x += v * dt
         simTime += dt
@@ -49,8 +50,9 @@ def loop(x, v, r, m, xi, N, first, collisions, involvements, numberOfCollisions)
         i = collision[1]
         dt = collision[0] - simTime
         E = 1/2 * m[0] * np.sum(v[:,0]**2)
-
-    return x, v, collisions, involvements
+        energies.append(E)
+    energies = np.array(energies)
+    return x, v, collisions, involvements, energies
     
 def speedSweep(r, m, N, file, numberOfCollisions, xi):
     m[0] = 25 * m[0] #Set projectile mass to 25 times that of the other particles
@@ -68,13 +70,16 @@ def speedSweep(r, m, N, file, numberOfCollisions, xi):
     
         collisions = initialisation(x0, v, r, collisions, N, involvements)
         first = hq.heappop(collisions)
-        x, v, collisions, involvements = loop(x0, v, r, m, xi, N, first, collisions, involvements, numberOfCollisions)
+        x, v, collisions, involvements, energies = loop(x0, v, r, m, xi, N, first, collisions, involvements, numberOfCollisions)
+        with open("problem4_EnergiesVsCollisionsSpeeds.npy", "ab") as f:
+            np.save(f, energies)
         with open(file, "rb") as f: #Get the initial positions for comparison
             x0 = np.load(f)
     
         delta_x = x - x0
-        crater = np.count_nonzero(delta_x[1:N])
+        crater = np.count_nonzero(delta_x[1:N]) / (N - 1) #Define crater as displaced/total
         craterSizes = np.append(craterSizes, crater)
+    
     with open("problem4_speedSweep.npy", "wb") as f:
         np.save(f, speeds)
         np.save(f, craterSizes)
@@ -95,12 +100,14 @@ def massSweep(r, m, N, file, numberOfCollisions, xi):
     
         collisions = initialisation(x0, v, r, collisions, N, involvements)
         first = hq.heappop(collisions)
-        x, v, collisions, involvements = loop(x0, v, r, m, xi, N, first, collisions, involvements, numberOfCollisions)
+        x, v, collisions, involvements, energies = loop(x0, v, r, m, xi, N, first, collisions, involvements, numberOfCollisions)
+        with open("problem4_EnergiesVsCollisionsMasses.npy", "ab") as f:
+            np.save(f, energies)
         with open(file, "rb") as f: #Get the initial positions for comparison
             x0 = np.load(f)
     
         delta_x = x - x0
-        crater = np.count_nonzero(delta_x[1:N])
+        crater = np.count_nonzero(delta_x[1:N]) / (N - 1) #Define crater as displaced/total
         craterSizes = np.append(craterSizes, crater)
     with open("problem4_massSweep.npy", "wb") as f:
         np.save(f, masses)
@@ -115,20 +122,8 @@ r[0] = 5 * r[0] #Set projectile radius to 5 times that of the other particles
 x0 = noOverlaps(r, N) #Particle positions; x[0][i] is the x-coord of particle i
 with open("problem4_initPositions.npy", "wb") as f: #Save initial positions: ensures no overwrites as loop modifies x0 otherwise
     np.save(f, x0)
-
-    
+  
 speedSweep(r, m, N, "problem4_initPositions.npy", numberOfCollisions, xi)
-with open("problem4_speedSweep.npy", "rb") as f:
-    speeds = np.load(f)
-    craterSizes = np.load(f)
-plt.scatter(speeds, craterSizes)
-plt.show()
-
 massSweep(r, m, N, "problem4_initPositions.npy", numberOfCollisions, xi)
-with open("problem4_massSweep.npy", "rb") as f:
-    masses = np.load(f)
-    craterSizes = np.load(f)
-plt.scatter(masses, craterSizes)
-plt.show()
 
 

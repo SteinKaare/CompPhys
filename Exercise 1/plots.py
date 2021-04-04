@@ -16,7 +16,7 @@ for i in range(1, 5):
 
 #Plot initial speed distribution
 plt.figure(1)
-plt.hist(speeds[0, 0], bins = np.linspace(0, v0 + 1, 350), color = "b")
+plt.hist(speeds[0, 0], bins = np.linspace(0, 2 * v0, 350), color = "b")
 plt.title("Initial Speed Distribution of %d Particles" % N)
 plt.xlabel("Speed")
 plt.ylabel("Frequency")
@@ -53,16 +53,16 @@ for i in range(1, 5):
 
 #Initial distribution, m = m0
 plt.figure(3)
-plt.hist(speeds[0, 0, 0:N//2], bins = np.linspace(0, v0 + 1, 350), color = "b")
-plt.title(f"Initial Speeds Distribution of {N//2} Particles, m = {m0}")
+plt.hist(speeds[0, 0, 0:N//2], bins = np.linspace(0, 2 * v0, 350), color = "b")
+plt.title(f"Initial Speed Distribution of {N//2} Particles, m = {m0}")
 plt.xlabel("Speed")
 plt.ylabel("Frequency")
 plt.show()
 
 #Initial distribution, m = 4m0
 plt.figure(3)
-plt.hist(speeds[0, 0, N//2:], bins = np.linspace(0, v0 + 1, 350), color = "b")
-plt.title(f"Initial Speeds Distribution of {N//2} Particles, m = {4*m0}")
+plt.hist(speeds[0, 0, N//2:], bins = np.linspace(0, 2 * v0, 350), color = "b")
+plt.title(f"Initial Speed Distribution of {N//2} Particles, m = {4*m0}")
 plt.xlabel("Speed")
 plt.ylabel("Frequency")
 plt.show()
@@ -128,7 +128,7 @@ for i in range(numberOfCollisions//100):
 plt.figure(7)
 plt.plot(times_avg, avgSpeeds_m0, label = f"m = {m0}", color = "b")
 plt.plot(times_avg, avgSpeeds_4m0, label = f"m = {4*m0}", color = "r")
-plt.title(f"Average Speed")
+plt.title(f"Average Speed versus Time")
 plt.xlabel("Time")
 plt.ylabel("Speed")
 plt.legend()
@@ -151,7 +151,7 @@ for i in range(numberOfCollisions//100):
 plt.figure(8)
 plt.plot(times_avg, avgKE_m0, label = f"m = {m0}", color = "b")
 plt.plot(times_avg, avgKE_4m0, label = f"m = {4*m0}", color = "r")
-plt.title(f"Average Kinetic Energy")
+plt.title(f"Average Kinetic Energy versus Time")
 plt.xlabel("Time")
 plt.ylabel("Kinetic Energy")
 plt.legend()
@@ -192,10 +192,78 @@ for i, xi in enumerate(Xi):
     plt.plot(times_avg[i], KEtot_avg[i], label = "Whole Gas", color = "black")
     plt.plot(times_avg[i], KEm0_avg[i], label = "Light Gas, m = %d" % m0, color = "b")
     plt.plot(times_avg[i], KE4m0_avg[i], label = "Heavy Gas, m = %d" % 4*m0, color = "r")
-    plt.title(r"Average Kinetic Energy, $\xi$ = %.1f" % xi)
+    plt.title(r"Average Kinetic Energy versus Time, $\xi$ = %.1f" % xi)
     plt.xlabel("Time")
     plt.ylabel("Kinetic Energy")
     plt.legend()
     plt.show()
     
+#PROBLEM 4
+
+#Crater Size vs v
+with open("problem4_speedSweep.npy", "rb") as f:
+    speeds = np.load(f)
+    craterSizes = np.load(f)
+plt.figure(11)
+plt.scatter(speeds, craterSizes, color = "black")
+plt.title("Crater Size versus Projectile Speed")
+plt.xlabel("Speed")
+plt.ylabel("Crater Size")
+plt.show()
+
+#Crater Size vs m
+with open("problem4_massSweep.npy", "rb") as f:
+    masses = np.load(f)
+    craterSizes = np.load(f)
+plt.figure(12)
+plt.scatter(masses, craterSizes, color = "black")
+plt.title("Crater Size versus Projectile Mass")
+plt.xlabel("Mass")
+plt.ylabel("Crater Size")
+plt.show()
+
+#Energy loss for varying speeds
+energies = []
+with open("problem4_EnergiesVsCollisionsSpeeds.npy", "rb") as f:
+    for i in range(10):
+        energy = np.load(f)
+        energies.append(energy)
+energies = np.array(energies, dtype=object)
+
+plt.figure(13)
+plt.title("Projectile Energy versus Colllisions, v = 5")
+plt.scatter(np.arange(len(energies[0])), energies[0], color = "black")
+plt.xlabel("Collisions")
+plt.ylabel("Projectile Energy")
+plt.show()
+
+plt.figure(14)
+plt.title("Projectile Energy versus Colllisions, v = 25")
+plt.scatter(np.arange(len(energies[-1])), energies[-1], color = "black")
+plt.xlabel("Collisions")
+plt.ylabel("Projectile Energy")
+plt.show()
+
+#Energy loss for varying masses
+energies = []
+with open("problem4_EnergiesVsCollisionsMasses.npy", "rb") as f:
+    for i in range(10):
+        energy = np.load(f)
+        energies.append(energy)
+energies = np.array(energies, dtype=object)
+
+plt.figure(15)
+plt.title("Projectile Energy versus Colllisions, m = 25")
+plt.scatter(np.arange(len(energies[0])), energies[0], color = "black")
+plt.xlabel("Collisions")
+plt.ylabel("Projectile Energy")
+plt.show()
+
+plt.figure(16)
+plt.title("Projectile Energy versus Colllisions, m = 50")
+plt.scatter(np.arange(len(energies[-1])), energies[-1], color = "black")
+plt.xlabel("Collisions")
+plt.ylabel("Projectile Energy")
+plt.show()
+
 
