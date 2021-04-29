@@ -2,29 +2,31 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.sparse import diags
 from scipy.integrate import simps
+from scipy.signal import gaussian
+from scipy.stats import moment
 from numba import njit
 from tqdm import trange
 
+
 def constructLR(K, dt, dz, kw):
-    N = len(K) #K has length N+1; K[N-1] is K_N, K[N-2] is K_(N-1)
     a = dt / (2 * dz**2)
     gamma = 2 * a * kw * dz * (1 - (-3/2 * K[0] + 2 * K[1] - 1/2 * K[2]) / (2 * K[0]))
-    K_prime = K[2:N] - K[0:N-2] #Slicing does not include the last element specified
+    K_prime = K[2:] - K[:-2] #Slicing does not include the last element specified
     #Setting diagonals for the L matrix
     #Super-diagonal
-    super_diag = - a * K[0:N-1]
+    super_diag = - a * K[:-1]
     super_diag[0] -= a * K[0] #Ensures -2aK_0 on the first element of this diagonal
     super_diag[1:] -= a/4 * K_prime
     #Main diagonal
     main_diag = 1 + 2 * a * K
     main_diag[0] += gamma
     #Sub_diagonal
-    sub_diag = - a * K[1:N]
+    sub_diag = - a * K[1:]
     sub_diag[-1] -= a * K[-1] #Ensures - 2aK_N on the last element of this diagonal
-    sub_diag[0:N-2] += a/4 * K_prime
+    sub_diag[:-1] += a/4 * K_prime
     #Construct matrices
     L = diags((sub_diag, main_diag, super_diag), offsets = (-1, 0, 1))
-    R = diags((- sub_diag, 2 * np.ones(N) - main_diag, - super_diag), offsets = (-1, 0, 1))
+    R = diags((- sub_diag, 2 * np.ones(len(K)) - main_diag, - super_diag), offsets = (-1, 0, 1))
     return L, R
     
 @njit
@@ -52,17 +54,32 @@ def TDMA(A, b): #Returns the solution x to the equation Ax = b, where A is a TDM
 def getVectorV(R, C, S_now, S_next):
     return R.dot(C) + 1/2 * (S_now + S_next)
 
-
-def iterator(C0, L, R, Tmax, dt, dz, K, kw, C_eq):
+def iterator(C0, Nt, dt, dz, K, kw, C_eq):
+    L, R = constructLR(K, dt, dz, kw)
     a = dt / (2 * dz**2)
     gamma = 2 * a * kw * dz * (1 - (-3/2 * K[0] + 2 * K[1] - 1/2 * K[2]) / (2 * K[0]))
-    Nt = int(Tmax/dt)
     S_now, S_next = np.zeros(len(C0)), np.zeros(len(C0))
     C = np.zeros((Nt + 1, len(C0)))
-    C[0, :] = C0
-    for i in trange(1, Nt + 1):
+    C[0] = C0
+    for i in trange(1, Nt+1):
         S_now[0] = 2 * gamma * C_eq[i-1]
         S_next[0] = 2 * gamma * C_eq[i]
-        V = getVectorV(R, C[i-1, :], S_now, S_next)
-        C[i, :] = TDMA(L, V)
+        V = getVectorV(R, C[i-1], S_now, S_next)
+        C[i] = TDMA(L, V)
     return C
+
+def iteratorReturnLastTime(C0, Nt, dt, dz, K, kw, C_eq):
+    L, R = constructLR(K, dt, dz, kw)
+    a = dt / (2 * dz**2)
+    gamma = 2 * a * kw * dz * (1 - (-3/2 * K[0] + 2 * K[1] - 1/2 * K[2]) / (2 * K[0]))
+    S_now, S_next = np.zeros(len(C0)), np.zeros(len(C0))
+    C = C0
+    for i in trange(1, Nt+1):
+        S_now[0] = 2 * gamma * C_eq[i-1]
+        S_next[0] = 2 * gamma * C_eq[i]
+        V = getVectorV(R, C, S_now, S_next)
+        C = TDMA(L, V)
+    return C
+
+def makeC_eq(Tmax, Nt): #Creates a C_eq growing by 2.3 ppm/yr
+    return 5060 * (415e-6 * np.ones(Nt + 1) + 2.3e-6 / (365*24*3600) * np.linspace(0, Tmax, Nt+1))
